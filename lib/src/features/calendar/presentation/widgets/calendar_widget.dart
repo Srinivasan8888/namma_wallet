@@ -85,72 +85,56 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     final monthName = DateFormat.yMMMM().format(_focusedMonth);
     final weekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColor.periwinkleBlue,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 19,
-    final monthName = DateFormat.yMMMM().format(_focusedMonth);
-    final weekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColor.periwinkleBlue,
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 19,
+    return TableCalendar<Event>(
+      firstDay: DateTime.utc(2020),
+      lastDay: DateTime.utc(2030, 12, 31),
+      focusedDay: selectedDay,
+      calendarFormat: calendarFormat,
+      selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+      onDaySelected: onDaySelected,
+      eventLoader: (day) {
+        final events = provider.getEventsForDay(day);
+        final tickets = provider.getTicketsForDay(day);
+        // TODO(keerthivasan-ai): need to get clarification from harishwarrior
+        return [
+          ...events,
+          ...tickets.map(
+            (t) => Event(
+              icon: Icons.confirmation_number,
+              title: t.primaryText,
+              subtitle: t.secondaryText,
+              date: day,
+              price: '',
+            ),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Month Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                onPressed: _handlePrevMonth,
-                icon: const Icon(Icons.chevron_left, size: 18),
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shape: const CircleBorder(),
-                ),
-              ),
-              Text(
-                monthName,
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Month Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                onPressed: _handlePrevMonth,
-                icon: const Icon(Icons.chevron_left, size: 18),
-                padding: const EdgeInsets.all(6),
-                constraints: const BoxConstraints(),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shape: const CircleBorder(),
-                ),
-              ),
-              Text(
-                monthName,
+        ];
+      },
+      calendarBuilders: CalendarBuilders(
+        markerBuilder: (context, day, events) {
+          if (provider.hasTicketsOnDay(day) ||
+              provider.getEventsForDay(day).isNotEmpty) {
+            return CustomDayCell(day: day, provider: provider);
+          }
+          return null;
+        },
+        selectedBuilder: (context, day, focusedDay) {
+          if (provider.hasTicketsOnDay(day) ||
+              provider.getEventsForDay(day).isNotEmpty) {
+            return CustomDayCell(
+              day: day,
+              provider: provider,
+              isSelected: true,
+            );
+          }
+          return Container(
+            margin: const EdgeInsets.all(4),
+            decoration: const BoxDecoration(
+              color: Colors.blue,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                '${day.day}',
                 style: const TextStyle(
                   fontFamily: 'Roboto',
                   fontFamily: 'Roboto',
