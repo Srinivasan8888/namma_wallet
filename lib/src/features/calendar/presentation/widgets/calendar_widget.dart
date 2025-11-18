@@ -32,6 +32,16 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     _focusedMonth = widget.provider.selectedDay;
   }
 
+  @override
+  void didUpdateWidget(CalendarWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!isSameDay(widget.provider.selectedDay, oldWidget.provider.selectedDay)) {
+      setState(() {
+        _focusedMonth = widget.provider.selectedDay;
+      });
+    }
+  }
+
   void _handlePrevMonth() {
     setState(() {
       _focusedMonth = DateTime(
@@ -240,7 +250,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     final hasContent = hasTickets || hasEvents;
 
     Color? backgroundColor;
-    Color textColor = Colors.white;
+    var textColor = Colors.white;
     if (isSelected) {
       backgroundColor = Colors.white;
       textColor = AppColor.periwinkleBlue;
