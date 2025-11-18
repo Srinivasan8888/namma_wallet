@@ -126,9 +126,9 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
     try {
       _logger.info('Processing content as: ${type.name}');
 
-      // Handle based on content type
-      if (content.type == SharedContentType.text) {
-        // Process SMS text
+      // Handle based on user-selected type
+      if (type == ShareContentType.ticket && content.type == SharedContentType.text) {
+        // Process SMS text as ticket
         final ticket = _smsService.parseTicket(content.data);
         await checkAndUpdateTNSTCTicket(ticket);
 
@@ -146,7 +146,7 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
             ),
           );
         }
-      } else if (content.type == SharedContentType.pdf) {
+      } else if (type == ShareContentType.document || content.type == SharedContentType.pdf) {
         // Handle PDF processing
         _logger.info('PDF processing not yet implemented');
         if (mounted) {
@@ -159,11 +159,11 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
           );
         }
       } else {
-        _logger.info('Content type ${content.type} not yet supported');
+        _logger.info('Content type ${type.name} not yet supported');
         if (mounted) {
           _scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
-              content: Text('${content.type.name} processing coming soon!'),
+              content: Text('${type.name} processing coming soon!'),
               backgroundColor: AppColor.primaryBlue,
               duration: const Duration(seconds: 2),
             ),
@@ -174,10 +174,10 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
       _logger.error('Error processing shared content', e, stackTrace);
       if (mounted) {
         _scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            content: Text('Error processing content: $e'),
+          const SnackBar(
+            content: Text('Error processing content'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
+            duration: Duration(seconds: 5),
           ),
         );
       }
@@ -220,7 +220,7 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
       scaffoldMessengerKey: _scaffoldMessengerKey,
       builder: (context, child) {
         // Wrap in a colored container to prevent white flash
-        return Container(
+        return ColoredBox(
           color: Theme.of(context).scaffoldBackgroundColor,
           child: Navigator(
             key: _navigatorKey,

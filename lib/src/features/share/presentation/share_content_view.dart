@@ -320,7 +320,6 @@ class _AnimatedShareOptionCardState extends State<_AnimatedShareOptionCard>
             child: Material(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              elevation: 0,
               child: InkWell(
                 onTap: widget.onTap,
                 onTapDown: (_) => setState(() => _isPressed = true),
@@ -492,9 +491,8 @@ class _AnimatedInfoTipState extends State<_AnimatedInfoTip>
             borderRadius: BorderRadius.circular(16),
           ),
           child: Text(
-            '💡 Tip: You can share from SMS, email, camera, or '
-            'clipboard. Namma Wallet will automatically detect and '
-            'parse ticket information.',
+            '💡 Tip: SMS ticket sharing is supported today. Support for '
+            'camera, email, PDF and clipboard imports is coming soon.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 14,
                   color: Colors.black.withValues(alpha: 0.7),
@@ -514,7 +512,6 @@ void showShareContentModal(
 }) {
   showGeneralDialog(
     context: context,
-    barrierDismissible: false,
     barrierLabel: '',
     transitionDuration: Duration.zero,
     pageBuilder: (context, animation, secondaryAnimation) {

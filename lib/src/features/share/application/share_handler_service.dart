@@ -24,6 +24,9 @@ class ShareHandlerService {
   ShareHandlerService({required ILogger logger}) : _logger = logger;
 
   final ILogger _logger;
+  
+  // Maximum file size: 10 MB
+  static const int maxFileSizeBytes = 10 * 1024 * 1024;
 
   /// Process shared file and determine its type
   Future<SharedContent> processSharedFile(String filePath) async {
@@ -34,17 +37,20 @@ class ShareHandlerService {
       throw Exception('File not found: $filePath');
     }
 
-    final extension = filePath.toLowerCase().split('.').last;
+    // Validate file size
+    final fileSize = await fileObj.length();
+    _logger.info('File size: $fileSize bytes');
     
-    // Try to determine MIME type from extension
-    String? mimeType;
-    if (_isPdfFile(extension, '')) {
-      mimeType = 'application/pdf';
-    } else if (_isImageFile(extension, '')) {
-      mimeType = 'image/*';
-    } else if (_isTextFile(extension, '')) {
-      mimeType = 'text/plain';
+    if (fileSize > maxFileSizeBytes) {
+      final sizeMB = (fileSize / (1024 * 1024)).toStringAsFixed(2);
+      final maxMB = (maxFileSizeBytes / (1024 * 1024)).toStringAsFixed(0);
+      throw Exception(
+        'File too large: $sizeMB MB (maximum: $maxMB MB)',
+      );
     }
+
+    final extension = _extractFileExtension(filePath);
+    final mimeType = _getMimeTypeFromExtension(extension);
 
     // Determine content type
     if (_isPdfFile(extension, mimeType ?? '')) {
@@ -62,13 +68,35 @@ class ShareHandlerService {
         mimeType: mimeType,
       );
     } else if (_isTextFile(extension, mimeType ?? '')) {
-      final content = await fileObj.readAsString();
-      return SharedContent(
-        type: SharedContentType.text,
-        data: content,
-        filePath: filePath,
-        mimeType: mimeType,
-      );
+      try {
+        final content = await fileObj.readAsString();
+        return SharedContent(
+          type: SharedContentType.text,
+          data: content,
+          filePath: filePath,
+          mimeType: mimeType,
+        );
+      } on FileSystemException catch (e) {
+        _logger.error(
+          'FileSystemException reading file: $filePath - ${e.message}',
+        );
+        return SharedContent(
+          type: SharedContentType.text,
+          data: '',
+          filePath: filePath,
+          mimeType: mimeType,
+        );
+      } on Exception catch (e) {
+        _logger.error(
+          'Exception reading file: $filePath - $e',
+        );
+        return SharedContent(
+          type: SharedContentType.text,
+          data: '',
+          filePath: filePath,
+          mimeType: mimeType,
+        );
+      }
     }
 
     return SharedContent(
@@ -81,7 +109,8 @@ class ShareHandlerService {
 
   /// Process shared text content
   SharedContent processSharedText(String text) {
-    _logger.info('Processing shared text: ${text.substring(0, 50)}...');
+    final preview = text.length <= 50 ? text : '${text.substring(0, 50)}...';
+    _logger.info('Processing shared text: $preview');
     return SharedContent(
       type: SharedContentType.text,
       data: text,
@@ -103,19 +132,65 @@ class ShareHandlerService {
         _logger.info('User selected: $title (${type.name})');
         try {
           await onContentProcessed(type, content);
-        } catch (e, stackTrace) {
+        } on Object catch (e, stackTrace) {
           _logger.error('Error processing shared content', e, stackTrace);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Error processing content: $e'),
+              const SnackBar(
+                content: Text('Unable to share content right now. Please try again.'),
                 backgroundColor: Colors.red,
+                duration: Duration(seconds: 4),
               ),
             );
           }
         }
       },
     );
+  }
+
+  /// Extract file extension robustly handling edge cases
+  String _extractFileExtension(String filePath) {
+    // Find the last path separator (handle both / and \)
+    final lastSlash = filePath.lastIndexOf('/');
+    final lastBackslash = filePath.lastIndexOf(r'\');
+    final lastSeparator = lastSlash > lastBackslash ? lastSlash : lastBackslash;
+    
+    // Get basename (everything after last separator)
+    final basename = lastSeparator >= 0 
+        ? filePath.substring(lastSeparator + 1) 
+        : filePath;
+    
+    // Find last dot in basename
+    final lastDot = basename.lastIndexOf('.');
+    
+    // No extension if:
+    // - No dot found
+    // - Dot is first character (hidden file like .gitignore)
+    // - Dot is last character (trailing dot)
+    if (lastDot <= 0 || lastDot == basename.length - 1) {
+      return '';
+    }
+    
+    return basename.substring(lastDot + 1).toLowerCase();
+  }
+
+  /// Get MIME type from file extension
+  String? _getMimeTypeFromExtension(String extension) {
+    if (extension == 'pdf') {
+      return 'application/pdf';
+    }
+    
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    if (imageExtensions.contains(extension)) {
+      return 'image/*';
+    }
+    
+    const textExtensions = ['txt', 'sms', 'text'];
+    if (textExtensions.contains(extension)) {
+      return 'text/plain';
+    }
+    
+    return null;
   }
 
   bool _isPdfFile(String extension, String mimeType) {
