@@ -42,6 +42,89 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
           final content = await file.readAsString();
           final ticket = _smsService.parseTicket(content);
           await checkAndUpdateTNSTCTicket(ticket);
+        _logger.info('Share intent received: $filePath');
+        
+        // Add to queue
+        _pendingShares.add(filePath);
+        
+        // Process immediately if context is available
+        if (_navigatorKey.currentContext != null && !_isProcessingShare) {
+          await _processPendingShares();
+        }
+      },
+      onError: (error) {
+        _logger.error('Sharing intent error: $error');
+        if (mounted) {
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Text('Sharing error: $error'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _processPendingShares() async {
+    if (_pendingShares.isEmpty || _isProcessingShare) return;
+    
+    _isProcessingShare = true;
+    
+    while (_pendingShares.isNotEmpty) {
+      final filePath = _pendingShares.removeAt(0);
+      
+      try {
+        _logger.info('Processing shared file: $filePath');
+        
+        // Process the shared file
+        final sharedContent = await _shareHandler.processSharedFile(filePath);
+        
+        // Show animated modal
+        final context = _navigatorKey.currentContext;
+        if (context != null && mounted) {
+          await _shareHandler.handleSharedContent(
+            context: context,
+            content: sharedContent,
+            onContentProcessed: (type, content) async {
+              await _processSharedContent(type, content);
+            },
+          );
+        }
+      } on Object catch (e, stackTrace) {
+        _logger.error(
+          'Error processing shared file',
+          e,
+          stackTrace,
+        );
+        if (mounted) {
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            SnackBar(
+              content: Text('Error processing shared file: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    }
+    
+    _isProcessingShare = false;
+  }
+
+  Future<void> _processSharedContent(
+    ShareContentType type,
+    SharedContent content,
+  ) async {
+    try {
+      _logger.info('Processing content as: ${type.name}');
+
+      // Handle based on user-selected type
+      if (type == ShareContentType.ticket && content.type == SharedContentType.text) {
+        // Process SMS text as ticket
+        final ticket = _smsService.parseTicket(content.data);
+        await checkAndUpdateTNSTCTicket(ticket);
 
           _logger.success(
             'Shared SMS processed successfully for PNR: ${ticket.pnrNumber}',
@@ -61,11 +144,30 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
             e,
             stackTrace,
           );
+        }
+      } else if (type == ShareContentType.document || content.type == SharedContentType.pdf) {
+        // Handle PDF processing
+        _logger.info('PDF processing not yet implemented');
+        if (mounted) {
+          _scaffoldMessengerKey.currentState?.showSnackBar(
+            const SnackBar(
+              content: Text('PDF processing coming soon!'),
+              backgroundColor: AppColor.primaryBlue,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        _logger.info('Content type ${type.name} not yet supported');
+        if (mounted) {
           _scaffoldMessengerKey.currentState?.showSnackBar(
             SnackBar(
               content: Text('Error processing shared SMS: $e'),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 5),
+              content: Text('${type.name} processing coming soon!'),
+              backgroundColor: AppColor.primaryBlue,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -75,8 +177,10 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
         _scaffoldMessengerKey.currentState?.showSnackBar(
           SnackBar(
             content: Text('Sharing error: $error'),
+          const SnackBar(
+            content: Text('Error processing content'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
+            duration: Duration(seconds: 5),
           ),
         );
       },
@@ -102,6 +206,18 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       scaffoldMessengerKey: _scaffoldMessengerKey,
+      builder: (context, child) {
+        // Wrap in a colored container to prevent white flash
+        return ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: Navigator(
+            key: _navigatorKey,
+            onGenerateRoute: (settings) => MaterialPageRoute(
+              builder: (context) => child!,
+            ),
+          ),
+        );
+      },
     );
   }
 }
