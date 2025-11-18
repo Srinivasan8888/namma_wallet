@@ -207,3 +207,4 @@ class ShareHandlerService {
     return textExtensions.contains(extension) || mimeType.contains('text');
   }
 }
+
