@@ -41,19 +41,35 @@ class _CalendarWidgetState extends State<CalendarWidget> {
 
   void _handlePrevMonth() {
     setState(() {
-      _focusedMonth = DateTime(
+      final candidate = DateTime(
         _focusedMonth.year,
         _focusedMonth.month - 1,
       );
+      final firstDay = DateTime.utc(2020, 1, 1);
+      
+      // Clamp to firstDay if candidate is before it
+      if (candidate.isBefore(firstDay)) {
+        _focusedMonth = DateTime(firstDay.year, firstDay.month);
+      } else {
+        _focusedMonth = candidate;
+      }
     });
   }
 
   void _handleNextMonth() {
     setState(() {
-      _focusedMonth = DateTime(
+      final candidate = DateTime(
         _focusedMonth.year,
         _focusedMonth.month + 1,
       );
+      final lastDay = DateTime.utc(2030, 12, 31);
+      
+      // Clamp to lastDay if candidate is after it
+      if (candidate.isAfter(lastDay)) {
+        _focusedMonth = DateTime(lastDay.year, lastDay.month);
+      } else {
+        _focusedMonth = candidate;
+      }
     });
   }
 
