@@ -56,10 +56,10 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
         _logger.error('Sharing intent error: $error');
         if (mounted) {
           _scaffoldMessengerKey.currentState?.showSnackBar(
-            SnackBar(
-              content: Text('Sharing error: $error'),
+            const SnackBar(
+              content: Text('Unable to share. Please try again.'),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
+              duration: Duration(seconds: 5),
             ),
           );
         }
@@ -72,45 +72,47 @@ class _NammaWalletAppState extends State<NammaWalletApp> {
     
     _isProcessingShare = true;
     
-    while (_pendingShares.isNotEmpty) {
-      final filePath = _pendingShares.removeAt(0);
-      
-      try {
-        _logger.info('Processing shared file: $filePath');
+    try {
+      while (_pendingShares.isNotEmpty) {
+        final filePath = _pendingShares.removeAt(0);
         
-        // Process the shared file
-        final sharedContent = await _shareHandler.processSharedFile(filePath);
-        
-        // Show animated modal
-        final context = _navigatorKey.currentContext;
-        if (context != null && mounted) {
-          await _shareHandler.handleSharedContent(
-            context: context,
-            content: sharedContent,
-            onContentProcessed: (type, content) async {
-              await _processSharedContent(type, content);
-            },
+        try {
+          _logger.info('Processing shared file: $filePath');
+          
+          // Process the shared file
+          final sharedContent = await _shareHandler.processSharedFile(filePath);
+          
+          // Show animated modal
+          final context = _navigatorKey.currentContext;
+          if (context != null && mounted) {
+            await _shareHandler.handleSharedContent(
+              context: context,
+              content: sharedContent,
+              onContentProcessed: (type, content) async {
+                await _processSharedContent(type, content);
+              },
+            );
+          }
+        } on Object catch (e, stackTrace) {
+          _logger.error(
+            'Error processing shared file',
+            e,
+            stackTrace,
           );
-        }
-      } on Object catch (e, stackTrace) {
-        _logger.error(
-          'Error processing shared file',
-          e,
-          stackTrace,
-        );
-        if (mounted) {
-          _scaffoldMessengerKey.currentState?.showSnackBar(
-            SnackBar(
-              content: Text('Error processing shared file: $e'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-            ),
-          );
+          if (mounted) {
+            _scaffoldMessengerKey.currentState?.showSnackBar(
+              const SnackBar(
+                content: Text('Error processing shared file'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
         }
       }
+    } finally {
+      _isProcessingShare = false;
     }
-    
-    _isProcessingShare = false;
   }
 
   Future<void> _processSharedContent(
