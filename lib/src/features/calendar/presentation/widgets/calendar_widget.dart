@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:namma_wallet/src/common/theme/styles.dart';
-import 'package:intl/intl.dart';
-import 'package:namma_wallet/src/common/theme/styles.dart';
 import 'package:namma_wallet/src/features/calendar/presentation/calendar_view.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-class CalendarWidget extends StatefulWidget {
 class CalendarWidget extends StatefulWidget {
   const CalendarWidget({
     required this.provider,
@@ -85,63 +82,41 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     final monthName = DateFormat.yMMMM().format(_focusedMonth);
     final weekDays = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-    return TableCalendar<Event>(
-      firstDay: DateTime.utc(2020),
-      lastDay: DateTime.utc(2030, 12, 31),
-      focusedDay: selectedDay,
-      calendarFormat: calendarFormat,
-      selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-      onDaySelected: onDaySelected,
-      eventLoader: (day) {
-        final events = provider.getEventsForDay(day);
-        final tickets = provider.getTicketsForDay(day);
-        // TODO(keerthivasan-ai): need to get clarification from harishwarrior
-        return [
-          ...events,
-          ...tickets.map(
-            (t) => Event(
-              icon: Icons.confirmation_number,
-              title: t.primaryText,
-              subtitle: t.secondaryText,
-              date: day,
-              price: '',
-            ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColor.periwinkleBlue,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 19,
           ),
-        ];
-      },
-      calendarBuilders: CalendarBuilders(
-        markerBuilder: (context, day, events) {
-          if (provider.hasTicketsOnDay(day) ||
-              provider.getEventsForDay(day).isNotEmpty) {
-            return CustomDayCell(day: day, provider: provider);
-          }
-          return null;
-        },
-        selectedBuilder: (context, day, focusedDay) {
-          if (provider.hasTicketsOnDay(day) ||
-              provider.getEventsForDay(day).isNotEmpty) {
-            return CustomDayCell(
-              day: day,
-              provider: provider,
-              isSelected: true,
-            );
-          }
-          return Container(
-            margin: const EdgeInsets.all(4),
-            decoration: const BoxDecoration(
-              color: Colors.blue,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                '${day.day}',
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          // Month Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                onPressed: _handlePrevMonth,
+                icon: const Icon(Icons.chevron_left, size: 18),
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  shape: const CircleBorder(),
+                ),
+              ),
+              Text(
+                monthName,
                 style: const TextStyle(
                   fontFamily: 'Roboto',
-                  fontFamily: 'Roboto',
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 0.42,
-                  color: Colors.white,
                   fontSize: 14,
                   letterSpacing: 0.42,
                   color: Colors.white,
@@ -313,49 +288,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                         color: textColor,
                       ),
                     ),
-              child: hasContent
-                  ? Stack(
-                      children: [
-                        Center(
-                          child: Text(
-                            '${day.day}',
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: textColor,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 4,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: Container(
-                              width: 4,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: textColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      '${day.day}',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: textColor,
-                      ),
-                    ),
             ),
-          ),
-        ),
           ),
         ),
       ),
